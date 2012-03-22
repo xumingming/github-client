@@ -1,6 +1,7 @@
 # github-client
 
 Purpose of this project
+
 * Practice the fantastic programming language: clojure
 * Build a command client for github.
 
