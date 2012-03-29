@@ -2,7 +2,10 @@
   (:require [clojure.string :as string])
   (:require [clj-http.client :as client])
   (:require [clj-time.core :as time])
+  (:require [clj-config.core :as conf])
+  (:use [clojure.pprint :only (pprint)])
   (:use [clj-time.format])
+  (:use [clojure.string :only (split)])
   (:use [clojure.data.json :only (read-json json-str)])
   (:use [clojure.java.io]))
 
@@ -54,26 +57,26 @@
 	   
 (defmethod event-str :default [type actor repo ts payload]
 		   nil)
-(defn gist-create []
-  (let [gist {:description "test gist"
-			 :public :true
-			  :files {"file1.txt" {:content "just a test"}}}]
-	(client/post "https://api.github.com/gists"
+(defn gist-create [file-path]
+  (let [file-path-arr (split file-path (re-pattern "/"))
+	filename (last file-path-arr)
+	content (slurp file-path)
+	gist {:description "test gist"
+              :public :true
+	      :files {filename {:content content}}}
+        resp	(client/post "https://api.github.com/gists"
 				 {:body (json-str gist)
-				  :content-type :json})))
+				  :content-type :json})
+        body (:body resp)
+	body (read-json body)
+	files (:files body)
+	gist-url (:html_url body)]
+     (print gist-url)))
 
-(defn test-it [file-path]
-  (with-open [rdr (reader file-path)]
-	(loop [line (.readLine rdr)]
-	  (if (not (nil? line))
-	    (println line)
-	    (recur (.readLine rdr))))))  
 (defn -main [& args]
+  (println "user is: " (conf/get-key "conf/user.clj" :username))
   (let [command (nth args 0)]
-    (println "command is" command)
     (condp = command
 	  "event" (event)
-	  "gist"  (gist-create)
-	  "test"  (let [file-path (nth args 1)]
-				(test-it file-path))
+	  "gist"  (gist-create (nth args 1))
 	   (usage))))
